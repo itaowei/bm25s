@@ -135,6 +135,67 @@ reloaded_retriever = bm25s.BM25.load("animal_index_bm25", load_corpus=True)
 # set load_corpus=False if you don't need the corpus
 ```
 
+Another example within Chinese words:
+
+```python
+import bm25s
+import jieba
+
+def zh_stemmer(text):
+    if isinstance(text, str):
+        wordlist = list(jieba.cut(text.strip()))
+        return wordlist
+    elif isinstance(text, list):
+        multiple_word_list = []
+        for each_sentence in text:
+            wordlist = zh_stemmer(each_sentence)
+            multiple_word_list.extend(wordlist)
+        return multiple_word_list
+
+# Create your corpus here
+corpus = [
+    "a cat is a feline and likes to purr",
+    "今天天气晴转多云",
+    "明天是sunny吗？",
+    "a dog is the human's best friend and loves to play",
+    "a bird is a beautiful animal that can fly",
+    "a fish is a creature that lives in water and swims",
+]
+
+# optional: use a stemmer that can deal with Chinese words
+stemmer = zh_stemmer
+
+# Tokenize the corpus and only keep the ids (faster and saves memory)
+corpus_tokens = bm25s.tokenize(corpus, stopwords=[" "], stemmer=stemmer, split_fn=stemmer, lower=False)
+
+# Create the BM25 model and index the corpus
+retriever = bm25s.BM25()
+retriever.index(corpus_tokens)
+
+# Query the corpus
+query = "a sunny今天天气 fish"
+query_tokens = bm25s.tokenize(query, stopwords=[" "], stemmer=stemmer, split_fn=stemmer)
+
+# Get top-k results as a tuple of (doc ids, scores). Both are arrays of shape (n_queries, k).
+# To return docs instead of IDs, set the `corpus=corpus` parameter.
+results, scores = retriever.retrieve(query_tokens, k=min(len(corpus), 5))
+
+for i in range(results.shape[1]):
+    doc, score = results[0, i], scores[0, i]
+    print(f"Rank {i+1} (score: {score:.2f}): {doc}")
+
+# You can save the arrays to a directory...
+retriever.save("weather_index_bm25")
+
+# You can save the corpus along with the model
+retriever.save("weather_index_bm25", corpus=corpus)
+
+# ...and load them when you need them
+import bm25s
+reloaded_retriever = bm25s.BM25.load("weather_index_bm25", load_corpus=True)
+# set load_corpus=False if you don't need the corpus
+```
+
 For an example that shows how to quickly index a 2M-documents corpus (Natural Questions), check out [`examples/index_nq.py`](examples/index_nq.py).
 
 ## Flexibility
