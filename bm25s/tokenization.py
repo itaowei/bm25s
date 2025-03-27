@@ -490,6 +490,7 @@ def tokenize(
     show_progress: bool = True,
     leave: bool = False,
     allow_empty: bool = True,
+    split_fn: Callable = None,
 ) -> Union[List[List[str]], Tokenized]:
     """
     Tokenize a list using the same method as the scikit-learn CountVectorizer,
@@ -544,6 +545,11 @@ def tokenize(
         Whether to allow the splitter to return an empty string. If False, the splitter 
         will return an empty list, which may cause issues if the tokenizer is not expecting
         an empty list. If True, the splitter will return a list with a single empty string.
+    
+    split_fn : Callable, optional
+        A function that takes a string and returns a list of strings. If None, the function
+        will use the regex pattern to split the strings.
+
     Note
     -----
     You may pass a single string or a list of strings. If you pass a single string,
@@ -552,7 +558,11 @@ def tokenize(
     if isinstance(texts, str):
         texts = [texts]
 
-    split_fn = re.compile(token_pattern).findall
+    if split_fn is None:
+        split_fn = re.compile(token_pattern).findall
+    else:
+        split_fn = split_fn
+
     stopwords = _infer_stopwords(stopwords)
 
     # Step 1: Split the strings using the regex pattern
